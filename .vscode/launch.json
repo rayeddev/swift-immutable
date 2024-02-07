@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "sourceLanguages": ["swift"],
+      "args": [],
+      "cwd": "${workspaceFolder:swift-immutable}",
+      "name": "Debug SwiftImmutableClient",
+      "program": "${workspaceFolder:swift-immutable}/.build/debug/SwiftImmutableClient",
+      "preLaunchTask": "swift: Build Debug SwiftImmutableClient"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "sourceLanguages": ["swift"],
+      "args": [],
+      "cwd": "${workspaceFolder:swift-immutable}",
+      "name": "Release SwiftImmutableClient",
+      "program": "${workspaceFolder:swift-immutable}/.build/release/SwiftImmutableClient",
+      "preLaunchTask": "swift: Build Release SwiftImmutableClient"
+    }
+  ]
+}
