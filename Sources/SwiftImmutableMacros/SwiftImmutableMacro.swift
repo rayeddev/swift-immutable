@@ -7,6 +7,16 @@ import SwiftSyntaxMacros
 enum CopyMacroError: Error {
     case msessge(String)
 }
+
+fileprivate struct StructMember
+{
+    let name: String
+    let type: String?
+    let isOptional: Bool
+    let isPrivate: Bool
+    let hasDefaultValue: Bool
+}
+
 public struct CopyMacro: MemberMacro
 {
     
@@ -24,7 +34,7 @@ public struct CopyMacro: MemberMacro
                 throw CopyMacroError.msessge("No struct identfier")
             }
             
-            let  arguments = generateMemebrs(node: declaration)
+            let arguments = generateMemebrs(node: declaration)
             let constructorArgs = generateConstructor(node: declaration)
             let boolKeys = generateBoolKeys(node: declaration)
             let boolSwitchs = generateBoolKeys(node: declaration, switchCase: true)
@@ -70,6 +80,56 @@ public struct CopyMacro: MemberMacro
         return syx
                      
     }
+}
+
+
+private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
+{
+    var result: [StructMember] = []
+    
+    for member in node.memberBlock.members {
+        
+        if let decl = member.decl.as(VariableDeclSyntax.self) {
+            let isPrivate = decl.modifiers.contains { $0.name.text == "private" }
+            for binding in decl.bindings {
+                // Extract the identifier (variable name) and its type annotation
+                var memberName: String?
+                var memberType: String?
+                var isOptional: Bool = false
+                
+                
+                
+                if let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) {
+                    memberName = identifierPattern.identifier.text
+                }
+                
+                if let typeAnnotation = binding.typeAnnotation {
+                    memberType = typeAnnotation.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    isOptional =  memberType?.hasSuffix("?") ?? false
+                                        
+                }
+                
+                
+                
+                
+                // Print the member name and type if available
+                if let name = memberName, let type = memberType {
+                
+                    
+                    
+                }
+                else
+                {
+                    continue
+                }
+            }
+        }
+    }
+
+    
+    
+    return []
 }
 
 private func generateMemebrs(node: DeclGroupSyntax) -> [String]
