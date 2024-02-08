@@ -1,7 +1,7 @@
 import SwiftImmutable
 
 
-@Copy
+@Clone
 struct Rayed {
     let x: Int = 1
     var m: String
@@ -9,4 +9,4 @@ struct Rayed {
 }
 
 var s = Rayed(m: "fs", d: 1)
-let d = s.copy(m:"check")
+let d = s.clone()

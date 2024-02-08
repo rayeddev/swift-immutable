@@ -3,4 +3,4 @@
 
 
 @attached(member,names: arbitrary)
-public macro Copy() = #externalMacro(module: "SwiftImmutableMacros", type: "CopyMacro")
+public macro Clone() = #externalMacro(module: "SwiftImmutableMacros", type: "CloneMacro")

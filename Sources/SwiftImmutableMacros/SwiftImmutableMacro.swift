@@ -11,13 +11,14 @@ enum CopyMacroError: Error {
 fileprivate struct StructMember
 {
     let name: String
-    let type: String?
+    let type: String
     let isOptional: Bool
     let isPrivate: Bool
-    let hasDefaultValue: Bool
+    let isLet: Bool
+
 }
 
-public struct CopyMacro: MemberMacro
+public struct CloneMacro: MemberMacro
 {
     
     public static func expansion(
@@ -34,20 +35,21 @@ public struct CopyMacro: MemberMacro
                 throw CopyMacroError.msessge("No struct identfier")
             }
             
-            let arguments = generateMemebrs(node: declaration)
-            let constructorArgs = generateConstructor(node: declaration)
-            let boolKeys = generateBoolKeys(node: declaration)
-            let boolSwitchs = generateBoolKeys(node: declaration, switchCase: true)
+            let members = extractStructMemebers(node: declaration)
+            let mutateArgs = mutateArgumentsSyx(members: members)
+            let initArgs = initArgumentsSyx(members: members)
+            let boolKeys = boolKeysSyx(members: members)
+            let boolSwitchs = boolKeysSyx(members: members, switchCase: true)
             
             
             
             var syx: [DeclSyntax] =  ["""
-        public func copy(
-        \(raw: arguments.joined(separator: ", "))
+        public func clone(
+        \(raw: mutateArgs.joined(separator: ", "))
         ) -> \(raw: name)
         {
             print(\"copy\")
-            return \(raw: name)(\(raw: constructorArgs.joined(separator: ", ")) )
+            return \(raw: name)(\(raw: initArgs.joined(separator: ", ")) )
         }
         """
             ]
@@ -64,7 +66,7 @@ public struct CopyMacro: MemberMacro
                 
                 syx.append(
                 """
-              public func copy(toggle __toggle: \(raw: name).BoolKeys) -> \(raw: name)
+              public func clone(toggle __toggle: \(raw: name).BoolKeys) -> \(raw: name)
               {
                  \(raw: boolSwitchs.joined())
               
@@ -90,18 +92,44 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
     for member in node.memberBlock.members {
         
         if let decl = member.decl.as(VariableDeclSyntax.self) {
+            if decl.hasError
+            {
+                continue
+            }
+         
+            let isLet =   decl.modifiers.contains(where: { $0.name.text == "let"})
+        
+            
+            
+    
             let isPrivate = decl.modifiers.contains { $0.name.text == "private" }
+
+            
+            if let binding = decl.bindings.first,
+                   let _ = binding.initializer  {
+                 continue
+             }
+            
+            
             for binding in decl.bindings {
                 // Extract the identifier (variable name) and its type annotation
                 var memberName: String?
                 var memberType: String?
                 var isOptional: Bool = false
+                var isLet: Bool = true
                 
                 
                 
                 if let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) {
                     memberName = identifierPattern.identifier.text
                 }
+                else
+                {
+                    continue
+                }
+                
+                
+                
                 
                 if let typeAnnotation = binding.typeAnnotation {
                     memberType = typeAnnotation.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -114,9 +142,9 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
                 
                 
                 // Print the member name and type if available
-                if let name = memberName, let type = memberType {
+                if let name = memberName, let type =  memberType {
                 
-                    
+                    result.append(StructMember(name: name, type: type, isOptional: isOptional, isPrivate: isPrivate, isLet: isLet))
                     
                 }
                 else
@@ -129,33 +157,32 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
 
     
     
-    return []
+    return result
 }
 
-private func generateMemebrs(node: DeclGroupSyntax) -> [String]
+fileprivate func mutateArgumentsSyx(members: [StructMember]) -> [String]
 {
     var result: [String] = []
-    for member in node.memberBlock.members {
-        
-        if let decl = member.decl.as(VariableDeclSyntax.self) {        
-            for binding in decl.bindings {                
-                // Extract the identifier (variable name) and its type annotation
-                var memberName: String?
-                var memberType: String?
-                
-                if let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) {
-                    memberName = identifierPattern.identifier.text
-                }
-                
-                if let typeAnnotation = binding.typeAnnotation {
-                    memberType = typeAnnotation.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-                }
-                
-                // Print the member name and type if available
-                if let name = memberName, let type = memberType {
-                    result.append("\(name): \(type)? = nil")
-                }
-            }
+    for member in members {
+        if !member.isLet
+        {
+            continue
+        }
+        result.append("\(member.name): \(member.type)? = nil")
+    }
+    
+    return result
+}
+
+fileprivate func initArgumentsSyx(members: [StructMember]) -> [String]
+{
+    var result: [String] = []
+    for member in members {
+        if member.isLet {
+            result.append("\(member.name): \(member.name) ??  self.\(member.name)")
+        }
+        else {
+            result.append("\(member.name): self.\(member.name)")
         }
     }
     
@@ -163,77 +190,38 @@ private func generateMemebrs(node: DeclGroupSyntax) -> [String]
 }
 
 
-private func generateConstructor(node: DeclGroupSyntax) -> [String]
+private func boolKeysSyx(members: [StructMember], switchCase: Bool = false) -> [String]
 {
     var result: [String] = []
-    for member in node.memberBlock.members {
+    for member in members {
         
-        if let decl = member.decl.as(VariableDeclSyntax.self) {
-            for binding in decl.bindings {
-                // Extract the identifier (variable name) and its type annotation
-                var memberName: String?
-                        
-                if let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) {
-                    memberName = identifierPattern.identifier.text
-                }
- 
-                // Print the member name and type if available
-                if let name = memberName {
-                    result.append("\(name): \(name) ??  self.\(name)")
-                }
+        
+    let name = member.name
+    let type = member.type
+        
+        if type == "Bool", member.isLet {
+        if switchCase {
+            result.append(
+            """
+            if case .\(name) = __toggle {
+                return self.clone(\(name): !self.\(name))
+            }
+        """
+            )
+        }
+        else
+        {
+            if result.count == 0 {
+                result.append("case \(name)")
+            }
+            else
+            {
+                result.append("\(name)")
             }
         }
+        
     }
-    
-    return result
-}
-
-private func generateBoolKeys(node: DeclGroupSyntax, switchCase: Bool = false) -> [String]
-{
-    var result: [String] = []
-    for member in node.memberBlock.members {
         
-        if let decl = member.decl.as(VariableDeclSyntax.self) {
-            for binding in decl.bindings {
-                // Extract the identifier (variable name) and its type annotation
-                var memberName: String?
-                var memberType: String?
-                
-                if let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) {
-                    memberName = identifierPattern.identifier.text
-                }
-                
-                if let typeAnnotation = binding.typeAnnotation {
-                    memberType = typeAnnotation.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-                }
-                
-                // Print the member name and type if available
-                if let name = memberName, let type = memberType {
-                    if type == "Bool" {
-                        if switchCase {
-                            result.append(
-                            """
-                            if case .\(name) = __toggle {
-                                return self.copy(\(name): !self.\(name))
-                            }
-                        """
-                            )
-                        }
-                        else
-                        {
-                            if result.count == 0 {
-                                result.append("case \(name)")
-                            }
-                            else
-                            {
-                                result.append("\(name)")
-                            }
-                        }
-                        
-                    }
-                }
-            }
-        }
     }
     
     return result
@@ -243,6 +231,6 @@ private func generateBoolKeys(node: DeclGroupSyntax, switchCase: Bool = false) -
 @main
 struct SwiftImmutablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
-        CopyMacro.self,
+        CloneMacro.self,
     ]
 }
