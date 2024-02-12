@@ -13,8 +13,9 @@ fileprivate struct StructMember
     let name: String
     let type: String
     let isOptional: Bool
-    let isPrivate: Bool
-    let isLet: Bool
+    let isLet: Bool 
+    let hasInitialValue: Bool
+
 
 }
 
@@ -34,52 +35,36 @@ public struct CloneMacro: MemberMacro
             {
                 throw CopyMacroError.msessge("No struct identfier")
             }
+
+            // continue if decalration has syntactic error
+            guard !declaration.hasError else {
+                return []
+            }
             
             let members = extractStructMemebers(node: declaration)
-            let mutateArgs = mutateArgumentsSyx(members: members)
-            let initArgs = initArgumentsSyx(members: members)
-            let boolKeys = boolKeysSyx(members: members)
-            let boolSwitchs = boolKeysSyx(members: members, switchCase: true)
             
-            
-            
-            var syx: [DeclSyntax] =  ["""
-        public func clone(
-        \(raw: mutateArgs.joined(separator: ", "))
-        ) -> \(raw: name)
-        {
-            print(\"copy\")
-            return \(raw: name)(\(raw: initArgs.joined(separator: ", ")) )
-        }
-        """
-            ]
-            
-            if boolKeys.count > 0 {
-                syx.append(
-    """
-    public enum BoolKeys {
-        \(raw: boolKeys.joined(separator: ", "))
-    }
-    """
-                )
-                
-                
-                syx.append(
-                """
-              public func clone(toggle __toggle: \(raw: name).BoolKeys) -> \(raw: name)
-              {
-                 \(raw: boolSwitchs.joined())
-              
-                 return self
-              }
-              """
-                )
+            guard members.count > 0 else {
+                return []
             }
+            
+
+            
+            
+            
+            let result: [DeclSyntax] = initCloneSyntax(name: "\(name)", members: members)
+            + numnaricMembersSyntax(name: "\(name)", members: members)
+            + stringMembersSyx(name: "\(name)", members: members)
+            + booleanMembersSyx(name: "\(name)", members: members)
+
+            // diagnosing result before return 
+
+            
+            
             
             
         
             
-        return syx
+        return result
                      
     }
 }
@@ -101,14 +86,20 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
         
             
             
-    
-            let isPrivate = decl.modifiers.contains { $0.name.text == "private" }
+            // ignore if it is private
+            let isPrivate = decl.modifiers.contains  {["private", "fileprivate"].contains( $0.name.text) }
+            if isPrivate
+            {
+                continue
+            }
 
-            
+            var hasInitialValue = false
+            // ignore if it have initializers
             if let binding = decl.bindings.first,
                    let _ = binding.initializer  {
-                 continue
+                hasInitialValue = true                                   
              }
+               
             
             
             for binding in decl.bindings {
@@ -116,7 +107,7 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
                 var memberName: String?
                 var memberType: String?
                 var isOptional: Bool = false
-                var isLet: Bool = true
+                
                 
                 
                 
@@ -128,13 +119,26 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
                     continue
                 }
                 
+
+                // continue if it have accessrs
+                if let accessors = binding.accessor {
+                    continue
+                }
                 
                 
                 
                 if let typeAnnotation = binding.typeAnnotation {
                     memberType = typeAnnotation.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
                     
+                    // ignore if double optional
+                    if memberType?.hasSuffix("??") ?? false {
+                        continue
+                    }
+
                     isOptional =  memberType?.hasSuffix("?") ?? false
+
+                    
+                    
                                         
                 }
                 
@@ -144,7 +148,7 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
                 // Print the member name and type if available
                 if let name = memberName, let type =  memberType {
                 
-                    result.append(StructMember(name: name, type: type, isOptional: isOptional, isPrivate: isPrivate, isLet: isLet))
+                    result.append(StructMember(name: name, type: type, isOptional: isOptional, isLet: isLet, hasInitialValue: hasInitialValue))
                     
                 }
                 else
@@ -160,72 +164,167 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
     return result
 }
 
-fileprivate func mutateArgumentsSyx(members: [StructMember]) -> [String]
+
+
+fileprivate func initCloneSyntax(name: String, members: [StructMember]) -> [DeclSyntax]
 {
-    var result: [String] = []
-    for member in members {
-        if !member.isLet
-        {
-            continue
-        }
-        result.append("\(member.name): \(member.type)? = nil")
-    }
+    let args = members.map { "\($0.name): \($0.type.filter{ $0.isLetter })? = nil" }.joined(separator: ", ")
+    let invokeArgsNoIntitializers = members
+    .filter { !$0.hasInitialValue }
+    .map { "\($0.name): \($0.name) ??  self.\($0.name)" }.joined(separator: ", ")
+
+    let invokeArgs = members.map { "\($0.name): \($0.name) ??  self.\($0.name)" }.joined(separator: ", ")
     
-    return result
-}
-
-fileprivate func initArgumentsSyx(members: [StructMember]) -> [String]
-{
-    var result: [String] = []
-    for member in members {
-        if member.isLet {
-            result.append("\(member.name): \(member.name) ??  self.\(member.name)")
-        }
-        else {
-            result.append("\(member.name): self.\(member.name)")
-        }
-    }
-    
-    return result
-}
-
-
-private func boolKeysSyx(members: [StructMember], switchCase: Bool = false) -> [String]
-{
-    var result: [String] = []
-    for member in members {
-        
-        
-    let name = member.name
-    let type = member.type
-        
-        if type == "Bool", member.isLet {
-        if switchCase {
-            result.append(
-            """
-            if case .\(name) = __toggle {
-                return self.clone(\(name): !self.\(name))
-            }
+    return [
         """
-            )
-        }
-        else
+        public func clone(\(raw: args)) -> \(raw: name)
         {
-            if result.count == 0 {
-                result.append("case \(name)")
-            }
-            else
-            {
-                result.append("\(name)")
+            return \(raw: name)(\(raw: invokeArgsNoIntitializers))
+        }
+        """
+    ]
+}
+
+
+fileprivate func numnaricMembersSyntax(name: String, members: [StructMember]) -> [DeclSyntax]
+{
+    let nMembers = members.filter { member in
+        ["Int", "Int8", "Int16", "Int32", "Int64",
+         "UInt", "UInt8", "UInt16", "UInt32", "UInt64",
+         "Float", "Double"].contains(member.type.filter { $0.isLetter })
+        }   
+
+
+    guard nMembers.count > 0 else {
+        return []
+    }
+
+    return [
+        // members as enum with type associated value
+        """
+        public enum NumKeys {
+            \(raw: nMembers.map { "case \($0.name)(\($0.type.filter { $0.isLetter } ))" }.joined(separator: "\n"))
+        }
+        """,
+
+        // clone with inc prameter
+        """
+        public func clone(inc __inc: \(raw: name).NumKeys) -> \(raw: name)
+        {
+            switch __inc {
+                \(raw: nMembers.map { 
+                    if $0.isOptional {
+                        return "case .\($0.name)(let value): return self.clone(\($0.name): self.\($0.name) != nil ? self.\($0.name)! + value : value)" 
+                    }
+                    return "case .\($0.name)(let value): return self.clone(\($0.name): self.\($0.name) + value)"
+                 }.joined(separator: "\n"))
             }
         }
-        
-    }
-        
-    }
-    
-    return result
+        """,
+
+        // clone with dec  prameter
+        """
+        public func clone(dec __dec: \(raw: name).NumKeys) -> \(raw: name)
+        {
+            switch __dec {
+                \(raw: nMembers.map { 
+                    if $0.isOptional {
+                        return "case .\($0.name)(let value): return self.clone(\($0.name): self.\($0.name) != nil ? self.\($0.name)! - value : -value)" 
+                    }
+                    return "case .\($0.name)(let value): return self.clone(\($0.name): self.\($0.name) - value)"
+                 }.joined(separator: "\n"))
+            }
+        }
+        """
+    ]    
 }
+
+
+fileprivate func stringMembersSyx(name: String, members: [StructMember]) -> [DeclSyntax]
+{
+    let sMembers = members.filter { member in
+        member.type.starts(with:"String")
+    }
+
+    guard sMembers.count > 0 else {
+        return []
+    }
+
+    return [
+        // members as enum with type associated value
+        """
+        public enum StringKeys {
+            \(raw: sMembers.map { "case \($0.name)(\($0.type.filter{ $0.isLetter } ))" }.joined(separator: "\n"))
+        }
+        """,
+
+        // clone with prefix prameter
+        """
+        public func clone(prefix __prefix: \(raw: name).StringKeys) -> \(raw: name)
+        {
+            switch __prefix {
+                \(raw: sMembers.map {
+                    if $0.isOptional {
+                        return "case .\($0.name)(let value): return self.clone(\($0.name): self.\($0.name) != nil ?  value + self.\($0.name)! : value)"
+                    }
+                    return "case .\($0.name)(let value): return self.clone(\($0.name): value + self.\($0.name))"
+                }.joined(separator: "\n"))                
+            }
+        }
+        """,
+
+        // clone with suffix  prameter
+        """
+        public func clone(suffix __suffix: \(raw: name).StringKeys) -> \(raw: name)
+        {
+            switch __suffix {
+                \(raw: sMembers.map {
+                    if $0.isOptional {
+                        return "case .\($0.name)(let value): return self.clone(\($0.name): self.\($0.name) != nil ?  self.\($0.name)! + value : value)"
+                    }
+                    return "case .\($0.name)(let value): return self.clone(\($0.name): self.\($0.name) + value)"
+                }.joined(separator: "\n"))
+            }
+        }
+        """
+    ]
+}
+
+fileprivate func booleanMembersSyx(name: String, members: [StructMember]) -> [DeclSyntax]
+{
+    let bMembers =  members.filter { member in
+        member.type.starts(with:"Bool")
+    }
+
+    guard bMembers.count > 0 else {
+        return []
+    }
+
+    return [
+        // members as enum with type associated value
+        """
+        public enum BoolKeys {
+            \(raw: bMembers.map { "case \($0.name)" }.joined(separator: "\n"))
+        }
+        """,
+
+        // clone with toggle prameter
+        """
+        public func clone(toggle __toggle: \(raw: name).BoolKeys) -> \(raw: name)
+        {
+            switch __toggle {
+                \(raw: bMembers.map { 
+                    if $0.isOptional {
+                        return "case .\($0.name): return self.clone(\($0.name): self.\($0.name) == nil ? true : !(self.\($0.name)!))"
+                    }
+                    return "case .\($0.name): return self.clone(\($0.name): !self.\($0.name))"
+                 }.joined(separator: "\n"))
+            }
+        }
+        """
+    ]
+}
+
 
 
 @main
