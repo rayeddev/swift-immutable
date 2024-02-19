@@ -31,6 +31,7 @@ public struct CloneMacro: MemberMacro
                 throw CopyMacroError.msessge("Copy macro only con be applied to struct type")
             }
             
+            
             guard let name = declaration.asProtocol(NamedDeclSyntax.self)?.name else
             {
                 throw CopyMacroError.msessge("No struct identfier")
@@ -51,10 +52,10 @@ public struct CloneMacro: MemberMacro
             
             
             
-            let result: [DeclSyntax] = initCloneSyntax(name: "\(name)", members: members)
-            + numnaricMembersSyntax(name: "\(name)", members: members)
-            + stringMembersSyx(name: "\(name)", members: members)
-            + booleanMembersSyx(name: "\(name)", members: members)
+            let result: [DeclSyntax] = initCloneSyntax(name: name.text, members: members)
+            + numnaricMembersSyntax(name: name.text, members: members)
+            + stringMembersSyx(name: name.text, members: members)
+            + booleanMembersSyx(name: name.text, members: members)
 
             // diagnosing result before return 
 
@@ -101,7 +102,7 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
              }
                
             
-            
+            // loop through inline identifiers e.g: let name: string, game: Int
             for binding in decl.bindings {
                 // Extract the identifier (variable name) and its type annotation
                 var memberName: String?
@@ -120,8 +121,12 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
                 }
                 
 
-                // continue if it have accessrs
-                if let accessors = binding.accessor {
+                if let initializerClause = binding.initializer {
+                    continue
+                }
+                
+                // continue if accessor block is not only didSet or willSet
+                if let accessors = binding.accessorBlock {
                     continue
                 }
                 
@@ -136,10 +141,6 @@ private func extractStructMemebers(node: DeclGroupSyntax) -> [StructMember]
                     }
 
                     isOptional =  memberType?.hasSuffix("?") ?? false
-
-                    
-                    
-                                        
                 }
                 
                 

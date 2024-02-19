@@ -3,12 +3,11 @@ import SwiftImmutable
 
 @Clone
 struct Person {
-    let id: Int
-    let name: String?
+    let id: Int, name: String?
     let age: Int
     let active: Bool
-    let open: Bool? = false
-    let count: Int? = 0
+    let open: Bool?
+
 
     func calc() -> Int {
         return age + 10
@@ -16,7 +15,24 @@ struct Person {
     
 }
 
-var s = Person(id: 1, name: "Rayed", age: 20, active: false)
+struct Human {
+    let id: Int
+    let name: String
+    var nationalty: String = "Saudi"
+    
+    init(id: Int, name: String, nationalty: String? = "Saudi") {
+        self.id = id
+        self.name = name
+        if let nationalty {
+            self.nationalty = nationalty
+        }
+    }
+}
+
+var h = Human(id: 1, name: "rayed", nationalty: "yemmen")
+print("human \(h)")
+
+var s = Person(id: 1, name: "Rayed", age: 20, active: false, open: false)
 
 
 s = s.clone(inc: .age(s.age))
@@ -27,7 +43,7 @@ s = s.clone(dec: .age(s.age))
 print("dec Age: \(s)")
 
 
-s = s.clone(inc: .count(1))
+s = s.clone(id: 1)
 
 s = s.clone(prefix: .name("Mr. "))
 print("s \(s)")

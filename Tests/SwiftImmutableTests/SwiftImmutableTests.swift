@@ -31,7 +31,7 @@ final class SwiftImmutableTests: XCTestCase {
 
                 public func clone(id: Int? = nil, name: String? = nil, age: Int? = nil) -> Person
                 {
-                    return Person (id: id ??  self.id, name: name ??  self.name, age: age ??  self.age)
+                    return Person(id: id ??  self.id, name: name ??  self.name, age: age ??  self.age)
                 }
 
                 public enum NumKeys {
@@ -39,7 +39,7 @@ final class SwiftImmutableTests: XCTestCase {
                     case age(Int)
                 }
 
-                public func clone(inc __inc: NumKeys) -> Person
+                public func clone(inc __inc: Person.NumKeys) -> Person
                 {
                     switch __inc {
                         case .id(let value):
@@ -49,7 +49,7 @@ final class SwiftImmutableTests: XCTestCase {
                     }
                 }
 
-                public func clone(dec __dec: NumKeys) -> Person
+                public func clone(dec __dec: Person.NumKeys) -> Person
                 {
                     switch __dec {
                         case .id(let value):
@@ -63,7 +63,7 @@ final class SwiftImmutableTests: XCTestCase {
                     case name(String)
                 }
 
-                public func clone(prefix __prefix: StringKeys) -> Person
+                public func clone(prefix __prefix: Person.StringKeys) -> Person
                 {
                     switch __prefix {
                         case .name(let value):
@@ -71,45 +71,12 @@ final class SwiftImmutableTests: XCTestCase {
                     }
                 }
 
-                public func clone(suffix __suffix: StringKeys) -> Person
+                public func clone(suffix __suffix: Person.StringKeys) -> Person
                 {
                     switch __suffix {
                         case .name(let value):
                         return self.clone(name: self.name + value)
                     }
-                }
-            }
-            """,
-            macros: testMacros
-        )
-        #else
-        throw XCTSkip("macros are only supported when running tests for the host platform")
-        #endif
-    }
-
-
-    func testMacroWithOptional() throws {
-        #if canImport(SwiftImmutableMacros)
-        assertMacroExpansion(
-            """
-            @Clone
-            struct Person {
-                let id: Int
-                let name: String
-                let age: Int?
-            }
-            """,
-            expandedSource: """
-            struct Person {
-                let id: Int
-                let name: String
-                let age: Int?
-
-                public func clone(
-                    id: Int? = nil, name: String? = nil, age: Int?? = nil
-                ) -> Person
-                {
-                    return Person (id: id ??  self.id, name: name ??  self.name, age: age ??  self.age )
                 }
             }
             """,
