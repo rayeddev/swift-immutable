@@ -32,7 +32,7 @@ struct Human {
 var h = Human(id: 1, name: "rayed", nationalty: "yemmen")
 print("human \(h)")
 
-var s = Person(id: 1, name: "Rayed", age: 20, active: false, open: false)
+var s = Person(id: 1, name: "Rayed", age: 40, active: false, open: false)
 
 
 s = s.clone(inc: .age(s.age))
