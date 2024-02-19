@@ -28,8 +28,10 @@ To start using `swift-immutable` in your Swift projects, follow these steps:
 2. Navigate to `File` > `Swift Packages` > `Add Package Dependency...`.
 3. Paste the following package URL into the search bar:
 
-```bash
-    https://github.com/rayeddev/swift-immutable.git
+```swift
+    dependencies: [
+      .package(url: "https://github.com/rayeddev/swift-immutable.git", from: "<#latest swift-immutable tag#>"),
+    ],
 ```
 4. Follow the prompts to add the package to your project.
 
