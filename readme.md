@@ -40,7 +40,20 @@ To start using `swift-immutable` in your Swift projects, follow these steps:
 
 ### Basic Cloning
 
+
 ```swift
+import SwiftImmutable
+
+
+// Pure struct
+@Clone
+struct Person {
+    let name: String
+    let age: Int
+    let active: Bool
+    let status: String
+}
+
 var person = Person(name: "Tom", age: 20, active: false, status: "free to hire")
 
 // Modify properties with clone
@@ -77,16 +90,7 @@ Limitations
 swift-immutable is designed for pure structs that have public or internal let members without initializers.
 This constraint ensures that your data structures are truly immutable and encourages best practices in immutable programming.
 
-Before using `swift-immutable`, you need to define a pure struct. Here's an example:
 
-```swift
-struct Person {
-    let name: String
-    let age: Int
-    let active: Bool
-    let status: String
-}
-```
 
 
 
