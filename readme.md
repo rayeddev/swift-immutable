@@ -52,7 +52,7 @@ person = person.clone(active: true, status: "not available")
 person = person.clone(inc: .age(1))
 
 // Toggle active status
-person = person.clone(toggle: .active())
+person = person.clone(toggle: .active)
 
 // Add prefix to name
 person = person.clone(prefix: .name("Mr. "))
@@ -67,10 +67,10 @@ person = person.clone(suffix: .name(" legend"))
 var persons = [Person]()
 
 // Deactivate all
-persons = persons.map { $0.clone(toggle: .active()) }
+persons = persons.map { $0.clone(toggle: .active) }
 
 // Update status and toggle active
-persons = persons.map { $0.clone(status: "hire", toggle: .active()) }
+persons = persons.map { $0.clone(status: "hire", toggle: .active) }
 ```
 
 Limitations
