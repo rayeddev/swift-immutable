@@ -2,15 +2,6 @@
 
 `swift-immutable` is a Swift macro package that extends pure structs with a `clone` method, inspired by Kotlin's data class `copy` function. This package aims to facilitate immutable programming in Swift, particularly beneficial when working with SwiftUI.
 
-## Benefits of Immutable Programming
-
-Immutable programming involves working with data that cannot be changed after it's created. This approach offers several advantages, especially in UI development with SwiftUI:
-
-- **Predictability**: Immutable data structures help ensure that your UI behaves as expected, as data cannot be altered unexpectedly.
-- **Thread-Safety**: Immutability naturally avoids issues related to concurrent data access, making your app safer and more reliable.
-- **Easier Debugging**: With immutable data, each state change is explicit, simplifying the debugging process.
-- **Optimized Performance with SwiftUI**: SwiftUI optimizes views that depend on immutable data, improving app performance.
-
 ## Features
 
 - Extend pure structs with a `clone` method, allowing for easy modification of immutable structures.
@@ -89,6 +80,19 @@ persons = persons.map { $0.clone(status: "hire", toggle: .active) }
 Limitations
 swift-immutable is designed for pure structs that have public or internal let members without initializers.
 This constraint ensures that your data structures are truly immutable and encourages best practices in immutable programming.
+
+
+--
+
+## Benefits of Immutable Programming
+
+Immutable programming involves working with data that cannot be changed after it's created. This approach offers several advantages, especially in UI development with SwiftUI:
+
+- **Predictability**: Immutable data structures help ensure that your UI behaves as expected, as data cannot be altered unexpectedly.
+- **Thread-Safety**: Immutability naturally avoids issues related to concurrent data access, making your app safer and more reliable.
+- **Easier Debugging**: With immutable data, each state change is explicit, simplifying the debugging process.
+- **Optimized Performance with SwiftUI**: SwiftUI optimizes views that depend on immutable data, improving app performance.
+
 
 
 
