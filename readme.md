@@ -1,6 +1,6 @@
 # swift-immutable
 
-`swift-immutable` is a Swift macro package that extends pure structs with a `clone` method, inspired by Kotlin's data class `copy` function. This package aims to facilitate immutable programming in Swift, particularly beneficial when working with SwiftUI.
+`swift-immutable` is a Swift macro package that extends pure structs with a `clone` method, copy swift struct that inspired by Kotlin's data class `copy` function. This package aims to facilitate immutable programming in Swift, particularly beneficial when working with SwiftUI.
 
 ## Features
 
